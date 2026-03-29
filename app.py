@@ -9,26 +9,22 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# =========================
-# MONGODB CONFIG
-# =========================
+
 uri = os.getenv("MONGO_URI")
 client = MongoClient(uri, tls=True, tlsCAFile=certifi.where())
 
 db = client['EduKitDB']
 
-# Collection terpisah
+
 pir_col = db['pir']
 ultra_col = db['ultrasonic']
 arduino_col = db['arduino']
 
-# Collection history (gabungan)
+
 history_col = db['history']
 
 
-# =========================
-# ROUTES PAGE
-# =========================
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -45,7 +41,7 @@ def get_detail(jenis, komponen):
         else:
             return jsonify({"status": "error", "pesan": "Jenis tidak valid"})
 
-        # 🔥 INI YANG DIUBAH
+        
         data = col.find_one({"key": komponen}, {"_id": 0})
         
         if data:
@@ -73,28 +69,24 @@ def arduino():
     return render_template('arduino.html')
 
 
-# =========================
-# API SUBMIT DATA
-# =========================
+#submit data 
 @app.route('/api/submit-deskripsi', methods=['POST'])
 def submit_deskripsi():
     try:
         data = request.get_json()
 
-        jenis = data.get('jenis')          # PIR / Ultrasonic / Arduino
-        komponen = data.get('komponen')    # contoh: Lensa Fresnel
+        jenis = data.get('jenis')          
+        komponen = data.get('komponen')    
         deskripsi = data.get('deskripsi')
 
-        # Validasi
+       
         if not jenis or not komponen or not deskripsi:
             return jsonify({
                 "status": "error",
                 "pesan": "Data tidak lengkap!"
             })
 
-        # =========================
-        # PILIH COLLECTION
-        # =========================
+        
         if jenis == "PIR":
             target_col = pir_col
         elif jenis == "Ultrasonic":
@@ -107,18 +99,14 @@ def submit_deskripsi():
                 "pesan": "Jenis tidak dikenali!"
             })
 
-        # =========================
-        # UPDATE DATA (AUTO UPDATE)
-        # =========================
+        
         target_col.update_one(
             {"komponen": komponen},
             {"$set": {"deskripsi": deskripsi}},
-            upsert=True  # kalau belum ada → insert
+            upsert=True  
         )
 
-        # =========================
-        # SIMPAN KE HISTORY
-        # =========================
+        
         history_col.insert_one({
             "jenis": jenis,
             "komponen": komponen,
@@ -138,9 +126,7 @@ def submit_deskripsi():
         })
 
 
-# =========================
-# API AMBIL DATA (BUAT UNITY)
-# =========================
+
 @app.route('/api/get-data/<jenis>', methods=['GET'])
 def get_data(jenis):
     try:
@@ -159,9 +145,7 @@ def get_data(jenis):
         return jsonify({"status": "error", "pesan": str(e)})
 
 
-# =========================
-# API HISTORY (OPTIONAL)
-# =========================
+
 @app.route('/api/history', methods=['GET'])
 def get_history():
     try:
